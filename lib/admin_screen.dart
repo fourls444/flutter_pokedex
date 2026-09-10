@@ -3,11 +3,14 @@ import 'package:flutter_pokedex/api_config.dart';
 import 'package:flutter_pokedex/create_screen.dart';
 import 'package:flutter_pokedex/detail_screen.dart';
 import 'package:flutter_pokedex/edit_screen.dart';
+import 'package:flutter_pokedex/type_category_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+  final Future<http.Response> Function(Uri uri)? fetch;
+
+  const AdminScreen({super.key, this.fetch});
 
   @override
   State<AdminScreen> createState() {
@@ -21,27 +24,6 @@ class _AdminScreenState extends State<AdminScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedType = 'All';
 
-  final List<String> _types = [
-    'All',
-    'Grass',
-    'Fire',
-    'Water',
-    'Electric',
-    'Psychic',
-    'Ice',
-    'Dragon',
-    'Dark',
-    'Fairy',
-    'Fighting',
-    'Flying',
-    'Poison',
-    'Ground',
-    'Rock',
-    'Bug',
-    'Ghost',
-    'Steel',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -50,9 +32,9 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _fetchPokemons() async {
-    final response = await http.get(
-      Uri.parse('$apiBaseUrl/pokemon/'),
-    );
+    final uri = Uri.parse('$apiBaseUrl/pokemon/');
+    final response =
+        widget.fetch == null ? await http.get(uri) : await widget.fetch!(uri);
 
     setState(() {
       _pokemons = json.decode(response.body);
@@ -128,45 +110,32 @@ class _AdminScreenState extends State<AdminScreen> {
     });
   }
 
-  Color _getTypeColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'grass':
-        return Colors.green;
-      case 'fire':
-        return Colors.red;
-      case 'water':
-        return Colors.blue;
-      case 'electric':
-        return Colors.yellow;
-      case 'psychic':
-        return const Color.fromARGB(255, 255, 110, 168);
-      case 'ice':
-        return Colors.cyan;
-      case 'dragon':
-        return Colors.indigo;
-      case 'dark':
-        return const Color.fromARGB(255, 139, 110, 96);
-      case 'fairy':
-        return const Color.fromARGB(255, 241, 168, 241);
-      case 'fighting':
-        return const Color.fromARGB(255, 207, 24, 24);
-      case 'flying':
-        return const Color.fromARGB(255, 154, 168, 255);
-      case 'poison':
-        return const Color.fromARGB(255, 180, 83, 160);
-      case 'ground':
-        return const Color.fromARGB(255, 226, 197, 110);
-      case 'rock':
-        return const Color.fromARGB(255, 197, 183, 125);
-      case 'bug':
-        return Colors.lightGreen;
-      case 'ghost':
-        return Colors.deepPurpleAccent;
-      case 'steel':
-        return Colors.blueGrey;
-      default:
-        return Colors.grey;
-    }
+  void _selectType(String type) {
+    setState(() {
+      _selectedType = type;
+    });
+    _filterPokemons();
+  }
+
+  Widget _adminTypeChip(String type) {
+    return Chip(
+      label: Text(
+        type,
+        maxLines: 1,
+        softWrap: false,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+      backgroundColor: TypeCategoryPicker.typeColor(type),
+      side: const BorderSide(color: Colors.black, width: 1),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
   }
 
   @override
@@ -222,25 +191,9 @@ class _AdminScreenState extends State<AdminScreen> {
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: DropdownButtonFormField<String>(
-              value: _selectedType,
-              items:
-                  _types.map((type) {
-                    return DropdownMenuItem<String>(
-                      value: type,
-                      child: Text(type),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedType = value!;
-                  _filterPokemons();
-                });
-              },
-              decoration: InputDecoration(
-                labelText: 'Type Catagory',
-                border: OutlineInputBorder(),
-              ),
+            child: TypeCategoryPicker(
+              selectedType: _selectedType,
+              onChanged: _selectType,
             ),
           ),
           Expanded(
@@ -273,6 +226,10 @@ class _AdminScreenState extends State<AdminScreen> {
                           ),
                         );
                       },
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 2,
+                      ),
                       leading: Image.network(
                         pokemon['avatar'],
                         width: 50,
@@ -283,40 +240,46 @@ class _AdminScreenState extends State<AdminScreen> {
                       ),
                       title: Text(
                         '#${pokemon['num']} ${pokemon['name']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                       subtitle: Row(
+                        key: const ValueKey('admin-type-row'),
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           if (pokemon['type1'] != null &&
                               pokemon['type1'].toLowerCase() != 'none')
-                            Chip(
-                              label: Text(
-                                pokemon['type1'],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              backgroundColor: _getTypeColor(pokemon['type1']),
-                            ),
+                            _adminTypeChip(pokemon['type1']),
                           if (pokemon['type1'] != null &&
-                              pokemon['type1'].toLowerCase() != 'none')
-                            const SizedBox(width: 5),
+                              pokemon['type1'].toLowerCase() != 'none' &&
+                              pokemon['type2'] != null &&
+                              pokemon['type2'].toLowerCase() != 'none')
+                            const SizedBox(width: 4),
                           if (pokemon['type2'] != null &&
                               pokemon['type2'].toLowerCase() != 'none')
-                            Chip(
-                              label: Text(
-                                pokemon['type2'],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              backgroundColor: _getTypeColor(pokemon['type2']),
-                            ),
-                          const Spacer(),
+                            _adminTypeChip(pokemon['type2']),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            tooltip: 'Edit Pokémon',
+                            visualDensity: VisualDensity.compact,
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.edit,
+                              color: Colors.blue,
+                              size: 24,
+                            ),
                             onPressed: () {
                               if (pokemon['id'] != null) {
                                 _navigateUpdate(pokemon['id']);
@@ -330,7 +293,18 @@ class _AdminScreenState extends State<AdminScreen> {
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
+                            tooltip: 'Delete Pokémon',
+                            visualDensity: VisualDensity.compact,
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.red,
+                              size: 24,
+                            ),
                             onPressed: () {
                               if (pokemon['id'] != null) {
                                 showDialog(

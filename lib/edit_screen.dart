@@ -5,8 +5,9 @@ import 'package:flutter_pokedex/api_config.dart';
 
 class EditScreen extends StatefulWidget {
   final int id;
+  final Future<http.Response> Function(Uri uri)? fetch;
 
-  const EditScreen({super.key, required this.id});
+  const EditScreen({super.key, required this.id, this.fetch});
 
   @override
   State<StatefulWidget> createState() {
@@ -37,8 +38,9 @@ class EditScreenState extends State<EditScreen> {
 
   Future<void> _fetchPokemon() async {
     final url = Uri.parse('$apiBaseUrl/pokemon/${widget.id}');
-    final response = await http.get(url);
+    final response = await (widget.fetch?.call(url) ?? http.get(url));
 
+    if (!mounted) return;
     if (response.statusCode == 200) {
       final pokemonData = jsonDecode(response.body)[0];
       _loadPokemonData(pokemonData);
@@ -60,7 +62,7 @@ class EditScreenState extends State<EditScreen> {
     _type1Controller.text = pokemonData['type1'] ?? '';
     _type2Controller.text = pokemonData['type2'] ?? '';
     _numController.text = pokemonData['num'] ?? '';
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> _update() async {
@@ -120,7 +122,8 @@ class EditScreenState extends State<EditScreen> {
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 154, 147, 147),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
+        key: const ValueKey('admin-form-scroll'),
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,

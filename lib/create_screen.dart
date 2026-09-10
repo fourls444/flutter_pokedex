@@ -85,7 +85,8 @@ class CreateScreenState extends State<CreateScreen> {
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 154, 147, 147),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
+        key: const ValueKey('admin-form-scroll'),
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
