@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pokedex/api_config.dart';
 import 'package:flutter_pokedex/detail_screen.dart';
 import 'package:flutter_pokedex/login_screen.dart';
 import 'package:http/http.dart' as http;
@@ -49,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchPokemons() async {
     final response = await http.get(
-      Uri.parse('http://localhost:3000/pokemon/'),
+      Uri.parse('$apiBaseUrl/pokemon/'),
     );
 
     setState(() {

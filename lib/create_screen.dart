@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pokedex/api_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -27,7 +28,7 @@ class CreateScreenState extends State<CreateScreen> {
   final TextEditingController _numController = TextEditingController();
 
   Future<void> _create() async {
-    final url = Uri.parse('http://localhost:3000/pokemon/');
+    final url = Uri.parse('$apiBaseUrl/pokemon/');
     final headers = {'Content-Type': 'application/json'};
     final body = jsonEncode({
       'name': _nameController.text,

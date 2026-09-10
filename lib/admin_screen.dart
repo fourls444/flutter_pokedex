@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pokedex/api_config.dart';
 import 'package:flutter_pokedex/create_screen.dart';
 import 'package:flutter_pokedex/detail_screen.dart';
 import 'package:flutter_pokedex/edit_screen.dart';
@@ -50,7 +51,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Future<void> _fetchPokemons() async {
     final response = await http.get(
-      Uri.parse('http://localhost:3000/pokemon/'),
+      Uri.parse('$apiBaseUrl/pokemon/'),
     );
 
     setState(() {
@@ -60,7 +61,7 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _delPokemons(id, index) async {
-    final url = Uri.parse('http://localhost:3000/pokemon/');
+    final url = Uri.parse('$apiBaseUrl/pokemon/');
     final headers = {'Content-Type': 'application/json'};
     final body = jsonEncode({'id': id});
     final res = await http.delete(url, headers: headers, body: body);
@@ -93,7 +94,7 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   // Future<void> _delPokemons(id, index) async {
-  //   final url = Uri.parse('http://localhost:3000/pokemon/$id');
+  //   final url = Uri.parse('$apiBaseUrl/pokemon/$id');
   //   final headers = {'Content-Type': 'application/json'};
   //   final res = await http.delete(url, headers: headers);
   //   if (res.statusCode == 200) {

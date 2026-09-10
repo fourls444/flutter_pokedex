@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_pokedex/api_config.dart';
 
 class EditScreen extends StatefulWidget {
   final int id;
@@ -35,7 +36,7 @@ class EditScreenState extends State<EditScreen> {
   }
 
   Future<void> _fetchPokemon() async {
-    final url = Uri.parse('http://localhost:3000/pokemon/${widget.id}');
+    final url = Uri.parse('$apiBaseUrl/pokemon/${widget.id}');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
@@ -63,7 +64,7 @@ class EditScreenState extends State<EditScreen> {
   }
 
   Future<void> _update() async {
-    final url = Uri.parse('http://localhost:3000/pokemon/');
+    final url = Uri.parse('$apiBaseUrl/pokemon/');
     final headers = {'Content-Type': 'application/json'};
     final body = jsonEncode({
       'name': _nameController.text,

@@ -1,0 +1,9 @@
+{
+  "java.enabled": false,
+  "java.import.gradle.enabled": false,
+  "gradle.autoDetect": "off",
+  "terminal.integrated.env.windows": {
+    "TEMP": "C:\\Windows\\Temp",
+    "TMP": "C:\\Windows\\Temp"
+  }
+}
