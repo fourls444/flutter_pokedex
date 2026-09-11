@@ -3,6 +3,7 @@ import 'package:flutter_pokedex/api_config.dart';
 import 'package:flutter_pokedex/create_screen.dart';
 import 'package:flutter_pokedex/detail_screen.dart';
 import 'package:flutter_pokedex/edit_screen.dart';
+import 'package:flutter_pokedex/pokemon_image.dart';
 import 'package:flutter_pokedex/type_category_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -42,14 +43,16 @@ class _AdminScreenState extends State<AdminScreen> {
     });
   }
 
-  Future<void> _delPokemons(id, index) async {
+  Future<void> _delPokemons(id) async {
     final url = Uri.parse('$apiBaseUrl/pokemon/');
     final headers = {'Content-Type': 'application/json'};
     final body = jsonEncode({'id': id});
     final res = await http.delete(url, headers: headers, body: body);
     if (res.statusCode == 200) {
+      if (!mounted) return;
       setState(() {
-        _pokemons.removeAt(index);
+        _pokemons.removeWhere((pokemon) => pokemon['id'] == id);
+        _filteredPokemons.removeWhere((pokemon) => pokemon['id'] == id);
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,11 +97,17 @@ class _AdminScreenState extends State<AdminScreen> {
   // }
 
   void _filterPokemons() {
-    final query = _searchController.text.toLowerCase();
+    final query = _searchController.text.trim().toLowerCase();
     setState(() {
       _filteredPokemons =
           _pokemons.where((pokemon) {
-            final matchesSearch = pokemon['name'].toLowerCase().contains(query);
+            final name = '${pokemon['name'] ?? ''}'.toLowerCase();
+            final number = '${pokemon['num'] ?? ''}'.toLowerCase();
+            final paddedNumber = number.padLeft(3, '0');
+            final matchesSearch =
+                name.contains(query) ||
+                number.contains(query) ||
+                (query.isNotEmpty && paddedNumber == query.padLeft(3, '0'));
             final matchesType =
                 _selectedType == 'All' ||
                 pokemon['type1'].toLowerCase() == _selectedType.toLowerCase() ||
@@ -151,13 +160,13 @@ class _AdminScreenState extends State<AdminScreen> {
         title: const Text(
           'Pokedex Admin',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             shadows: [
               Shadow(
-                offset: Offset(2.0, 2.0),
-                blurRadius: 4.0,
-                color: Colors.yellow,
+                offset: Offset(1.5, 1.5),
+                blurRadius: 3.0,
+                color: Colors.black54,
               ),
             ],
           ),
@@ -167,11 +176,13 @@ class _AdminScreenState extends State<AdminScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const CreateScreen()),
               );
+              if (!mounted) return;
+              if (result == true) await _fetchPokemons();
             },
           ),
         ],
@@ -230,13 +241,10 @@ class _AdminScreenState extends State<AdminScreen> {
                         horizontal: 12,
                         vertical: 2,
                       ),
-                      leading: Image.network(
-                        pokemon['avatar'],
+                      leading: PokemonImage(
+                        url: pokemon['avatar']?.toString(),
                         width: 50,
                         height: 50,
-                        errorBuilder:
-                            (context, error, stackTrace) =>
-                                const Icon(Icons.error),
                       ),
                       title: Text(
                         '#${pokemon['num']} ${pokemon['name']}',
@@ -325,7 +333,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                         TextButton(
                                           onPressed: () {
                                             Navigator.of(context).pop();
-                                            _delPokemons(pokemon['id'], index);
+                                            _delPokemons(pokemon['id']);
                                           },
                                           child: const Text('Delete'),
                                         ),

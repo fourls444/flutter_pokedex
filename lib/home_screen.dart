@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pokedex/api_config.dart';
 import 'package:flutter_pokedex/detail_screen.dart';
 import 'package:flutter_pokedex/login_screen.dart';
+import 'package:flutter_pokedex/pokemon_image.dart';
 import 'package:flutter_pokedex/type_category_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -42,11 +43,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _filterPokemons() {
-    final query = _searchController.text.toLowerCase();
+    final query = _searchController.text.trim().toLowerCase();
     setState(() {
       _filteredPokemons =
           _pokemons.where((pokemon) {
-            final matchesSearch = pokemon['name'].toLowerCase().contains(query);
+            final name = '${pokemon['name'] ?? ''}'.toLowerCase();
+            final number = '${pokemon['num'] ?? ''}'.toLowerCase();
+            final paddedNumber = number.padLeft(3, '0');
+            final matchesSearch =
+                name.contains(query) ||
+                number.contains(query) ||
+                (query.isNotEmpty && paddedNumber == query.padLeft(3, '0'));
             final matchesType =
                 _selectedType == 'All' ||
                 pokemon['type1'].toLowerCase() == _selectedType.toLowerCase() ||
@@ -153,13 +160,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         );
                       },
-                      leading: Image.network(
-                        pokemon['avatar'],
+                      leading: PokemonImage(
+                        url: pokemon['avatar']?.toString(),
                         width: 50,
                         height: 50,
-                        errorBuilder:
-                            (context, error, stackTrace) =>
-                                const Icon(Icons.error),
                       ),
                       title: Text(
                         '#${pokemon['num']} ${pokemon['name']}',

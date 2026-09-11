@@ -37,7 +37,7 @@ class TypeCategoryPicker extends StatelessWidget {
       case 'all':
         return const Color.fromARGB(255, 96, 96, 96);
       case 'normal':
-        return Colors.blueGrey;
+        return const Color(0xFFB6B6A8);
       case 'grass':
         return Colors.green;
       case 'fire':

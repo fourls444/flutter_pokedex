@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pokedex/api_config.dart';
+import 'package:flutter_pokedex/pokemon_image.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -167,17 +168,11 @@ class _DetailScreenState extends State<DetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Image.network(
-                      _pokemonDetail!['avatar'],
+                    PokemonImage(
+                      url: _pokemonDetail!['avatar']?.toString(),
                       width: 250,
                       height: 250,
                       fit: BoxFit.cover,
-                      errorBuilder:
-                          (_, __, ___) => const Icon(
-                            Icons.image_not_supported,
-                            size: 120,
-                            color: Colors.grey,
-                          ),
                     ),
                     const SizedBox(height: 16),
                     Text(

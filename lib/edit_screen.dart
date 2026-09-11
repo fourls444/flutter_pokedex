@@ -1,7 +1,9 @@
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_pokedex/api_config.dart';
+import 'package:flutter_pokedex/pokemon_form_fields.dart';
+import 'package:http/http.dart' as http;
 
 class EditScreen extends StatefulWidget {
   final int id;
@@ -10,9 +12,7 @@ class EditScreen extends StatefulWidget {
   const EditScreen({super.key, required this.id, this.fetch});
 
   @override
-  State<StatefulWidget> createState() {
-    return EditScreenState();
-  }
+  State<EditScreen> createState() => EditScreenState();
 }
 
 class EditScreenState extends State<EditScreen> {
@@ -29,6 +29,23 @@ class EditScreenState extends State<EditScreen> {
   final TextEditingController _type1Controller = TextEditingController();
   final TextEditingController _type2Controller = TextEditingController();
   final TextEditingController _numController = TextEditingController();
+
+  Future<bool> _isNumberTaken(String number) async {
+    try {
+      final response = await http.get(Uri.parse('$apiBaseUrl/pokemon/'));
+      if (response.statusCode != 200) return false;
+
+      final pokemons = jsonDecode(response.body);
+      if (pokemons is! List) return false;
+      return pokemons.any(
+        (pokemon) =>
+            '${pokemon['num'] ?? ''}'.trim() == number &&
+            '${pokemon['id'] ?? ''}' != '${widget.id}',
+      );
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   void initState() {
@@ -50,18 +67,19 @@ class EditScreenState extends State<EditScreen> {
   }
 
   void _loadPokemonData(Map<String, dynamic> pokemonData) {
-    _nameController.text = pokemonData['name'] ?? '';
-    _totalController.text = pokemonData['total'] ?? '';
-    _hpController.text = pokemonData['hp'] ?? '';
-    _atkController.text = pokemonData['atk'] ?? '';
-    _defController.text = pokemonData['def'] ?? '';
-    _spatkController.text = pokemonData['spatk'] ?? '';
-    _spdefController.text = pokemonData['spdef'] ?? '';
-    _spdController.text = pokemonData['spd'] ?? '';
-    _avatarController.text = pokemonData['avatar'] ?? '';
-    _type1Controller.text = pokemonData['type1'] ?? '';
-    _type2Controller.text = pokemonData['type2'] ?? '';
-    _numController.text = pokemonData['num'] ?? '';
+    _nameController.text = '${pokemonData['name'] ?? ''}';
+    _totalController.text = '${pokemonData['total'] ?? ''}';
+    _hpController.text = '${pokemonData['hp'] ?? ''}';
+    _atkController.text = '${pokemonData['atk'] ?? ''}';
+    _defController.text = '${pokemonData['def'] ?? ''}';
+    _spatkController.text = '${pokemonData['spatk'] ?? ''}';
+    _spdefController.text = '${pokemonData['spdef'] ?? ''}';
+    _spdController.text = '${pokemonData['spd'] ?? ''}';
+    _avatarController.text = '${pokemonData['avatar'] ?? ''}';
+    _type1Controller.text = '${pokemonData['type1'] ?? ''}';
+    final type2 = '${pokemonData['type2'] ?? ''}';
+    _type2Controller.text = type2.toLowerCase() == 'none' ? '' : type2;
+    _numController.text = '${pokemonData['num'] ?? ''}';
     if (mounted) setState(() {});
   }
 
@@ -69,30 +87,41 @@ class EditScreenState extends State<EditScreen> {
     final url = Uri.parse('$apiBaseUrl/pokemon/');
     final headers = {'Content-Type': 'application/json'};
     final body = jsonEncode({
-      'name': _nameController.text,
-      'total': _totalController.text,
-      'hp': _hpController.text,
-      'atk': _atkController.text,
-      'def': _defController.text,
-      'spatk': _spatkController.text,
-      'spdef': _spdefController.text,
-      'spd': _spdController.text,
-      'avatar': _avatarController.text,
+      'name': _nameController.text.trim(),
+      'total': _totalController.text.trim(),
+      'hp': _hpController.text.trim(),
+      'atk': _atkController.text.trim(),
+      'def': _defController.text.trim(),
+      'spatk': _spatkController.text.trim(),
+      'spdef': _spdefController.text.trim(),
+      'spd': _spdController.text.trim(),
+      'avatar': _avatarController.text.trim(),
       'type1': _type1Controller.text,
-      'type2': _type2Controller.text,
-      'num': _numController.text,
+      'type2': _type2Controller.text.isEmpty ? 'None' : _type2Controller.text,
+      'num': _numController.text.trim(),
       'id': widget.id,
     });
 
     final res = await http.put(url, headers: headers, body: body);
     if (!mounted) return;
     if (res.statusCode == 200 || res.statusCode == 201) {
-      jsonDecode(res.body);
       _showSnackBar('Update Pokemon success');
       Navigator.pop(context, true);
     } else {
-      _showSnackBar('Error updating Pokemon');
+      _showSnackBar(_responseError(res, 'Error updating Pokémon'));
     }
+  }
+
+  String _responseError(http.Response response, String fallback) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['error'] is String) {
+        return decoded['error'] as String;
+      }
+    } catch (_) {
+      // Use the fallback when the API response is not JSON.
+    }
+    return fallback;
   }
 
   void _showSnackBar(String message) {
@@ -102,19 +131,40 @@ class EditScreenState extends State<EditScreen> {
   }
 
   @override
+  void dispose() {
+    for (final controller in [
+      _nameController,
+      _totalController,
+      _hpController,
+      _atkController,
+      _defController,
+      _spatkController,
+      _spdefController,
+      _spdController,
+      _avatarController,
+      _type1Controller,
+      _type2Controller,
+      _numController,
+    ]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Edit Pokemon',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             shadows: [
               Shadow(
-                offset: Offset(2.0, 2.0),
-                blurRadius: 4.0,
-                color: Colors.yellow,
+                offset: Offset(1.5, 1.5),
+                blurRadius: 3.0,
+                color: Colors.black54,
               ),
             ],
           ),
@@ -122,160 +172,23 @@ class EditScreenState extends State<EditScreen> {
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 154, 147, 147),
       ),
-      body: SingleChildScrollView(
-        key: const ValueKey('admin-form-scroll'),
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Pokemon Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter Pokemon Name';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _totalController,
-                decoration: const InputDecoration(labelText: 'Total Stats'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter Total Stats';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _hpController,
-                decoration: const InputDecoration(labelText: 'HP'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter HP';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _atkController,
-                decoration: const InputDecoration(labelText: 'ATK'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter ATK';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _defController,
-                decoration: const InputDecoration(labelText: 'DEF'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter DEF';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _spatkController,
-                decoration: const InputDecoration(labelText: 'SP.ATK'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter SP.ATK';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _spdefController,
-                decoration: const InputDecoration(labelText: 'Sp.DEF'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter Sp.DEF';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _spdController,
-                decoration: const InputDecoration(labelText: 'SPD'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter SPD';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _avatarController,
-                decoration: const InputDecoration(labelText: 'Avatar URL'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter Avatar URL';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _type1Controller,
-                decoration: const InputDecoration(labelText: 'Type 1'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter Type 1';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _type2Controller,
-                decoration: const InputDecoration(labelText: 'Type 2'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter Type 2';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              TextFormField(
-                controller: _numController,
-                decoration: const InputDecoration(labelText: 'No'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please Enter No';
-                  } else {
-                    return null;
-                  }
-                },
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      _update();
-                    }
-                  },
-                  child: const Text('EDIT'),
-                ),
-              ),
-            ],
-          ),
-        ),
+      body: PokemonFormFields(
+        formKey: _formKey,
+        nameController: _nameController,
+        totalController: _totalController,
+        hpController: _hpController,
+        atkController: _atkController,
+        defController: _defController,
+        spatkController: _spatkController,
+        spdefController: _spdefController,
+        spdController: _spdController,
+        avatarController: _avatarController,
+        type1Controller: _type1Controller,
+        type2Controller: _type2Controller,
+        numController: _numController,
+        submitLabel: 'EDIT',
+        onSubmit: _update,
+        checkNumberDuplicate: _isNumberTaken,
       ),
     );
   }
